@@ -33,9 +33,9 @@ int main()
     gpio_put(Pin_Oe,1);
 
     // Variables locales
-    unsigned int data = 0x0051;
+    unsigned int data = 0x0001;
     unsigned int msk = 0x0200;
-    unsigned char i;
+    char i;
 
     // Boucle infinie
     while (true)
@@ -48,9 +48,9 @@ int main()
             gpio_put(PICO_DEFAULT_LED_PIN, (data & msk)>>i ); // Led
 
             gpio_put(Pin_CP, true); // coup de clock
-            sleep_ms(100);
+            sleep_ms(500);
             gpio_put(Pin_CP, false);
-            sleep_ms(100);
+            sleep_ms(500);
 
             msk = msk >> 1;
         }
