@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.20)
 include(pico_sdk_import.cmake)
 project(Prog_Rp)
 
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 add_executable(Prog_Rp main.cpp)
 
