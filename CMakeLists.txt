@@ -16,4 +16,4 @@ pico_enable_stdio_uart(Prog_Rp 0)
 pico_add_extra_outputs(Prog_Rp)
 
 # Pull in our pico_stdlib which pulls in commonly used features
-target_link_libraries(Prog_Rp pico_stdlib)
+target_link_libraries(Prog_Rp pico_stdlib hardware_spi)
