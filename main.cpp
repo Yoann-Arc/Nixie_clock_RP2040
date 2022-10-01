@@ -35,21 +35,8 @@
 spi_inst_t *spi = spi0;
 uint8_t tabBuf[2];
 uint8_t tabHeure[3];
-uint16_t tabDigit[4] = {0, 0, 0, 0};
 uint8_t etatClock = 1;
-uint16_t tabConvert[10]=
-        {
-                0x0001,//0
-                0x0002,//1
-                0x0004,//2
-                0x0008,//3
-                0x0010,//4
-                0x0020,//5
-                0x0040,//6
-                0x0080,//7
-                0x0100,//8
-                0x0200//9
-        };
+
 
 int reg_read(  spi_inst_t *spi_l,
                const uint cs,
@@ -92,17 +79,35 @@ void RegWrite(spi_inst_t *spi_l, const uint cs, const uint8_t reg, const uint8_t
     spi_write_blocking(spi_l, msg, 2);
     gpio_put(cs, 0);
 }
-void AffichageTubes(uint16_t Tubes[4])
+void AffichageTubes(uint8_t Heure[3])
 {
     uint16_t i,j,buf;
     uint16_t msk;
+    uint16_t tabDigit[4] = {0, 0, 0, 0};
+    uint16_t tabConvert[10]=
+    {
+    0x0001,//0
+    0x0002,//1
+    0x0004,//2
+    0x0008,//3
+    0x0010,//4
+    0x0020,//5
+    0x0040,//6
+    0x0080,//7
+    0x0100,//8
+    0x0200//9
+    };
+    tabDigit[0] = tabConvert[tabHeure[Minutes] & 0x0f];
+    tabDigit[1] = tabConvert[tabHeure[Minutes] >> 4];
+    tabDigit[2] = tabConvert[tabHeure[Heures] & 0x0f];
+    tabDigit[3] = tabConvert[tabHeure[Heures] >> 4];
     gpio_put(Pin_STR, true);
     for (j=0;j<4;j++)
     {
         msk = 0x0800;
         for (i = 12; i > 0; i--)
         {
-            gpio_put(Pin_D, !((Tubes[j] & msk) >> (i - 1))); // Output data
+            gpio_put(Pin_D, !((tabDigit[j] & msk) >> (i - 1))); // Output data
             gpio_put(Pin_CP, true); // coup de clock
             //sleep_ms(10);
             for(buf=0;buf<64000;buf++);
@@ -124,11 +129,6 @@ int64_t AlarmCallback(alarm_id_t id, void *user_data)
     gpio_set_irq_enabled(BUTTON_MODE, GPIO_IRQ_FALLING_EDGE, true);
     return 0;
 }
-
-//void ButtonModeCallback(uint gpio, uint32_t events)
-//{
-//
-//}
 void SynchroCallback(uint gpio, uint32_t events)
 {
     if (gpio == Pin_1Hz)
@@ -149,15 +149,10 @@ void SynchroCallback(uint gpio, uint32_t events)
             std::cout << "10Secondes ! " << "\n" << std::endl;
             //if((tabHeure[2]>>4)==0x03 || (tabHeure[2]>>4)==0x00)
             {
-                std::cout << "Heures : " << std::to_string(tabHeure[Secondes] >> 4) << std::to_string(tabHeure[Secondes] & 0x0F) << ":"
+                std::cout << "Heures : " << std::to_string(tabHeure[Heures] >> 4) << std::to_string(tabHeure[Heures] & 0x0F) << ":"
                           << std::to_string(tabHeure[Minutes] >> 4) << std::to_string(tabHeure[Minutes] & 0x0F) << ":"
-                          << std::to_string(tabHeure[Heures] >> 4) << std::to_string(tabHeure[Heures] & 0x0F) << "\n" << std::endl;
-
-                tabDigit[0] = tabConvert[tabHeure[Minutes] & 0x0f];
-                tabDigit[1] = tabConvert[tabHeure[Minutes] >> 4];
-                tabDigit[2] = tabConvert[tabHeure[Heures] & 0x0f];
-                tabDigit[3] = tabConvert[tabHeure[Heures] >> 4];
-                AffichageTubes(tabDigit);
+                          << std::to_string(tabHeure[Secondes] >> 4) << std::to_string(tabHeure[Secondes] & 0x0F) << "\n" << std::endl;
+                AffichageTubes(tabHeure);
             }
         }
     }
@@ -181,15 +176,34 @@ void SynchroCallback(uint gpio, uint32_t events)
             etatClock = 1;
             std::cout << "Run clock" << std::endl;
             RegWrite(spi, Pin_CS, addCTRL, 0x04);
-            AffichageTubes(tabDigit);
+            AffichageTubes(tabHeure);
         }
     }
     if(gpio==BUTTON_UP)
     {
+        // Prototype modification hours
 //        if(etatClock==1)
 //        {
-//            tabHeure[1]++;
-//
+//            std::cout << "Button Up" << std::endl;
+//            tabHeure[Minutes]++;
+//            if((tabHeure[Minutes]&0x0F)>9)
+//            {
+//                tabHeure[Minutes] = ((tabHeure[Minutes]>>4)+1)<<4;
+//            }
+//            if((tabHeure[Minutes]>>4)>5)
+//            {
+//                tabHeure[Minutes] = 0;
+//                tabHeure[Heures]++;
+//            }
+//            if((tabHeure[Heures]&0x0F)>9)
+//            {
+//                tabHeure[Heures] = ((tabHeure[Heures]>>4)+1)<<4;
+//            }
+//            if((tabHeure[Heures]>>4)>2)
+//            {
+//                tabHeure[Heures] = 0;
+//            }
+//            AffichageTubes(tabDigit);
 //        }
     }
 }
