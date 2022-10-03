@@ -8,13 +8,18 @@
 
 // Définitions
 #define GPIO_IRQ_FALLING_EDGE 0x04
+
 #define addCTRL 0x0F
 #define addSec 0x00
 #define addMin 0x01
 #define addHrs 0x02
+
 #define Secondes 2
 #define Minutes 1
 #define Heures 0
+
+#define RunClock 1
+#define StopClock 0
 // Definitions des pins
 #define Pin_En 22
 #define Pin_CP 21
@@ -34,8 +39,8 @@
 // Variables globales
 spi_inst_t *spi = spi0;
 uint8_t tabBuf[2];
-uint8_t tabHeure[3];
-uint8_t etatClock = 1;
+uint8_t tabHeure[3] = {0x19,0x49,0x00};
+uint8_t etatClock = RunClock;
 
 
 int reg_read(  spi_inst_t *spi_l,
@@ -131,6 +136,7 @@ int64_t AlarmCallback(alarm_id_t id, void *user_data)
 }
 void SynchroCallback(uint gpio, uint32_t events)
 {
+    std::cout << "Pin interrupt : "<<std::to_string(gpio) << std::endl;
     if (gpio == Pin_1Hz)
     {
         std::cout << "Time 1Hz interrupt" << std::endl;
@@ -164,47 +170,78 @@ void SynchroCallback(uint gpio, uint32_t events)
         //gpio_set_irq_enabled(BUTTON_MODE, GPIO_IRQ_FALLING_EDGE, false);
         //add_alarm_in_ms(500, AlarmCallback, NULL, false);
         gpio_put(PICO_DEFAULT_LED_PIN, !gpio_get(PICO_DEFAULT_LED_PIN)); // Led
-        if(etatClock==1)
+        if(etatClock==RunClock)
         {
             // On entre dans le mode de réglage de l'heure
-            etatClock = 0;
+            etatClock = StopClock;
             std::cout << "Stop clock" << std::endl;
             RegWrite(spi, Pin_CS, addCTRL, 0x00);
         }
         else
         {
-            etatClock = 1;
+            etatClock = RunClock;
             std::cout << "Run clock" << std::endl;
+            RegWrite(spi,Pin_CS,addSec,0x00);
+            RegWrite(spi,Pin_CS,addMin,tabHeure[Minutes]);
+            RegWrite(spi,Pin_CS,addHrs,tabHeure[Heures]);
             RegWrite(spi, Pin_CS, addCTRL, 0x04);
             AffichageTubes(tabHeure);
         }
     }
     if(gpio==BUTTON_UP)
     {
-        // Prototype modification hours
-//        if(etatClock==1)
-//        {
-//            std::cout << "Button Up" << std::endl;
-//            tabHeure[Minutes]++;
-//            if((tabHeure[Minutes]&0x0F)>9)
-//            {
-//                tabHeure[Minutes] = ((tabHeure[Minutes]>>4)+1)<<4;
-//            }
-//            if((tabHeure[Minutes]>>4)>5)
-//            {
-//                tabHeure[Minutes] = 0;
-//                tabHeure[Heures]++;
-//            }
-//            if((tabHeure[Heures]&0x0F)>9)
-//            {
-//                tabHeure[Heures] = ((tabHeure[Heures]>>4)+1)<<4;
-//            }
-//            if((tabHeure[Heures]>>4)>2)
-//            {
-//                tabHeure[Heures] = 0;
-//            }
-//            AffichageTubes(tabDigit);
-//        }
+        if(etatClock==StopClock)
+        {
+            std::cout << "Button Up" << std::endl;
+            tabHeure[Minutes]++;
+            if((tabHeure[Minutes]&0x0F)>9)
+            {
+                tabHeure[Minutes] = ((tabHeure[Minutes]>>4)+1)<<4;
+            }
+            if((tabHeure[Minutes]>>4)>5)
+            {
+                tabHeure[Minutes] = 0;
+                tabHeure[Heures]++;
+            }
+            if((tabHeure[Heures]&0x0F)>9)
+            {
+                tabHeure[Heures] = ((tabHeure[Heures]>>4)+1)<<4;
+            }
+            if(tabHeure[Heures]>0x23)
+            {
+                tabHeure[Heures] = 0;
+            }
+            AffichageTubes(tabHeure);
+        }
+    }
+    if(gpio==BUTTON_DOWN)
+    {
+        if(etatClock==StopClock)
+        {
+            std::cout << "Button Down" << std::endl;
+            tabHeure[Minutes]--;
+            std::cout << "minutes : " << std::to_string(tabHeure[Minutes]>>4) << std::to_string(tabHeure[Minutes]&0x0f) << std::endl;
+            if((tabHeure[Minutes]&0x0F)>9)
+            {
+                tabHeure[Minutes] = (((tabHeure[Minutes]>>4)-1)<<4)|0x09;
+            }
+            if(tabHeure[Minutes]>0x59)
+            {
+                tabHeure[Minutes] = 0x59;
+                tabHeure[Heures] --;
+            }
+            if((tabHeure[Heures]&0x0F)>9)
+            {
+                std::cout << "Heures : " << std::to_string(tabHeure[Heures]>>4) << std::to_string(tabHeure[Heures]&0x0f) << std::endl;
+                tabHeure[Heures] = (tabHeure[Heures]&~0x0F)+0x09;
+                std::cout << "Heures : " << std::to_string(tabHeure[Heures]>>4) << std::to_string(tabHeure[Heures]&0x0f) << std::endl;
+            }
+            if(tabHeure[Heures]>0x23)
+            {
+                tabHeure[Heures]=0x23;
+            }
+            AffichageTubes(tabHeure);
+        }
     }
 }
 int main()
